@@ -1,0 +1,24 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+  https: false
+  cert: ""
+  key: ""
+  home: "."
+
+anny:
+  enable: true
+  mode: "r"
+  path: ""
+
+users:
+  - username: "admin"
+    password: "admin"
+    paths:
+      - path: "."
+        mode: "w"
+  - username: "long"
+    password: "longxxx"
+    paths:
+      - path: "./long"
+        mode: "r"
