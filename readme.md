@@ -73,8 +73,7 @@ curl -X DELETE 'http://admin:easyadmin123@127.0.0.1:8080/_token?all=true'
 ## 如何安装
 
 ```bash
-
-go get -u github.com/longguikeji/longlib/easyserver
+go get -u github.com/iamlongalong/easyserver
 ```
 
 

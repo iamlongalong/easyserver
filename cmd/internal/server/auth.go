@@ -1,11 +1,12 @@
 package server
 
 import (
-	"easyserver/cmd/internal/model"
 	"fmt"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/iamlongalong/easyserver/cmd/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"

@@ -4,12 +4,13 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"easyserver/cmd/internal/model"
-	"easyserver/cmd/internal/server"
 	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
+
+	"github.com/iamlongalong/easyserver/cmd/internal/model"
+	"github.com/iamlongalong/easyserver/cmd/internal/server"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"

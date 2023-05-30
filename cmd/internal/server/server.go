@@ -1,7 +1,6 @@
 package server
 
 import (
-	"easyserver/cmd/internal/model"
 	"fmt"
 	"log"
 	"math/rand"
@@ -9,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/iamlongalong/easyserver/cmd/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"

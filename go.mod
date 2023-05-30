@@ -1,4 +1,4 @@
-module easyserver
+module github.com/iamlongalong/easyserver
 
 go 1.18
 
