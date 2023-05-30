@@ -4,7 +4,9 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -29,6 +31,8 @@ func Execute() {
 }
 
 func init() {
+	rand.Seed(time.Now().UnixMilli())
+
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.

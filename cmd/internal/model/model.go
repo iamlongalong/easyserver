@@ -97,7 +97,7 @@ type TokenAuth struct {
 
 // create Token params
 type CreateTokenParams struct {
-	PathRoles        []PathRole `json:"path_roles" validate:"len=1,dive,required"`
+	PathRoles        []PathRole `json:"path_roles" validate:"dive,required"`
 	Duration         string     `json:"duration" validate:"required"`
 	UploadSizeLimit  string     `json:"size_limit"`
 	UploadCountLimit int        `json:"count_limit"`

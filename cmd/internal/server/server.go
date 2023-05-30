@@ -4,6 +4,7 @@ import (
 	"easyserver/cmd/internal/model"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/gofrs/uuid"
 )
 
 var (
@@ -115,6 +115,11 @@ func CreateToken(c *gin.Context) {
 		return
 	}
 
+	if len(params.PathRoles) == 0 {
+		c.JSON(400, gin.H{"message": "pathRoles is empty"})
+		return
+	}
+
 	iuser, ok := c.Get("user")
 	if !ok {
 		c.JSON(400, gin.H{"message": "user not found"})
@@ -139,7 +144,7 @@ func CreateToken(c *gin.Context) {
 	}
 
 	token := model.TokenAuth{
-		Token:            genUUID(),
+		Token:            randString(12),
 		SignedUser:       user,
 		PathRoles:        rmaps,
 		SignAt:           time.Now(),
@@ -263,22 +268,33 @@ func Serve(s model.ServieConfig) {
 }
 
 func DeleteToken(c *gin.Context) {
-	user, ok := c.MustGet("user").(model.User)
+	iuser, ok := c.Get("user")
 	if !ok {
 		c.JSON(400, gin.H{"message": "user not found"})
 		return
 	}
 
-	deleteToken(user, c.Query("token"))
+	user, ok := iuser.(model.User)
+	if !ok {
+		c.JSON(401, gin.H{"message": "user not found"})
+		return
+	}
+
+	err := deleteToken(user, c.Query("token"), c.Query("all") != "")
+	if err != nil {
+		c.JSON(400, gin.H{"message": err.Error()})
+		return
+	}
 
 	c.JSON(200, gin.H{"message": "ok"})
 }
 
-func genUUID() string {
-	u, err := uuid.NewV4()
-	if err != nil {
-		return genUUID()
+// rand string
+func randString(n int) string {
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890$_")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
 	}
-
-	return u.String()
+	return string(b)
 }

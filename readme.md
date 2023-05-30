@@ -1,38 +1,25 @@
 ## easyserver
 
-## 骨感现实
-
-先做一个最基本的版本，仅实现下面的基本功能
-
-1. 提供一个简单的 http server，可以指定端口、ip、根目录
-2. 可以指定一个上传目录，可以上传文件到指定目录
-3. 可以指定 user 和 password，可以通过 basic auth 访问
-4. 可以为 user 指定目录的权限，可以指定为只读、只写、读写
-5. user 可以生成 token，可以指定 token 的有效期、可用次数、可用路径、可用文件名、可用操作类型
-6. 可以通过 token 访问，可以指定 token 的有效期、可用次数、可用路径、可用文件名、可用操作类型
-7. 所有的操作都需要记录日志，日志文件可以指定
-8. 可以指定 https 的证书文件
-9. 可以通过 config 文件配置，也可以通过命令行参数配置
 
 ## 先跑起来吧
 
 ```bash
-easyserver --server.home .
+easyserver serve .
 ```
 
 ```bash
 # 设置 host 和 port
-easyserver --server.home . --server.host 0.0.0.0 --server.port 8080
+easyserver serve . --addr 0.0.0.0:8080
 ```
 
 ```bash
 # 设置 https 证书 和 domain
-easyserver --server.home . --server.https ./certs/xx.pem:./certs/xx.key --server.domain xx.com
+easyserver serve . --https domain.longalong.cn:./certs/xx.pem:./certs/xx.key
 ```
 
 ```bash
 # 设置 user 和 password
-easyserver --server.home . --server.user admin:passadmin
+easyserver serve . --user admin:passadmin --user readuser:passxx:r:/data/img
 ```
 
 ```bash
@@ -40,9 +27,65 @@ easyserver --server.home . --server.user admin:passadmin
 easyserver --config ./config.yaml
 ```
 
+```bash
+# 查看文件 
+curl http://127.0.0.1:8080/data/img/xx.jpg
+
+# 需要 basic auth
+curl http://admin:passadmin@127.0.0.1:8080/data/img
+
+# 使用 token
+curl http://127.0.0.1:8080/data?token=xxxxx
+```
+
+```bash
+# 上传文件
+curl -F "file=@./xx.jpg" http://127.0.0.1:8080/data/longimg.jpg
+
+# basic auth
+curl -u admin:passadmin -F "file=@./xx.jpg" http://127.0.0.1:8080/another/longxxx.jpg
+
+# token
+curl -F "file=@./xx.db" http://127.0.0.1:8080/xx.db?token=xxxxx
+```
+
+```bash
+# 生成 token
+curl http://admin:easyadmin123@127.0.0.1:8080/_token -H "Content-Type: application/json" -d  '
+{
+    "path_roles": [
+        {"path": "/pulic", "mode": "r"},
+        {"path": "/path/to/write", "mode": "w"}
+    ],
+    "duration": "12h",
+    "count_limit": 20
+}
+'
+## {"token":"ec75Aef6FC9e"}
+
+```
+
+## 如何安装
+
+
+
+## 已经实现的功能
+
+先做一个最基本的版本，仅实现下面的基本功能
+
+- [x] 提供一个简单的 http server，可以指定端口、ip、根目录
+- [x] 可以指定一个上传目录，可以上传文件到指定目录
+- [x] 可以指定 user 和 password，可以通过 basic auth 访问
+- [x] 可以为 user 指定目录的权限，可以指定为只读、只写、读写
+- [x] user 可以生成 token，可以指定 token 的有效期、可用次数、可用路径、可用操作类型(r/w)
+- [x] 可以通过 token 访问，可以指定 token 的有效期、write可用次数、可用路径、可用操作类型(r/w)
+- [x] 可以指定 https 的证书文件
+- [x] 可以通过 config 文件配置，也可以通过命令行参数配置
+
+
 > 以上是最基本的功能
 
-====
+------
 
 > 以下是一开始的想法，后来觉得太复杂了，先做一个最简单的版本吧
 

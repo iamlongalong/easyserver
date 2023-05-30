@@ -77,9 +77,19 @@ func createToken(u *model.User, t model.TokenAuth) error {
 	return nil
 }
 
-func deleteToken(user model.User, token string) error {
+func deleteToken(user model.User, token string, all bool) error {
 	tokenLock.Lock()
 	defer tokenLock.Unlock()
+
+	if all {
+		for t, tauth := range userTokens {
+			if tauth.SignedUser.UserName == user.UserName {
+				delete(userTokens, t)
+			}
+		}
+
+		return nil
+	}
 
 	t, ok := userTokens[token]
 	if !ok {
