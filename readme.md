@@ -46,7 +46,7 @@ curl -F "file=@./xx.jpg" http://127.0.0.1:8080/data/longimg.jpg
 curl -u admin:passadmin -F "file=@./xx.jpg" http://127.0.0.1:8080/another/longxxx.jpg
 
 # token
-curl -F "file=@./xx.db" http://127.0.0.1:8080/xx.db?token=xxxxx
+curl -F "file=@./xx.db" 'http://127.0.0.1:8080/xx.db?token=xxxxx'
 ```
 
 ```bash
@@ -63,10 +63,19 @@ curl http://admin:easyadmin123@127.0.0.1:8080/_token -H "Content-Type: applicati
 '
 ## {"token":"ec75Aef6FC9e"}
 
+# 删除 token
+curl -X DELETE 'http://admin:easyadmin123@127.0.0.1:8080/_token?token=xxxxxx'
+
+# 删除 该 user 所有 token
+curl -X DELETE 'http://admin:easyadmin123@127.0.0.1:8080/_token?all=true'
 ```
 
 ## 如何安装
 
+```bash
+
+go get -u github.com/longguikeji/longlib/easyserver
+```
 
 
 ## 已经实现的功能
