@@ -7,33 +7,21 @@ import (
 )
 
 type Server struct {
-	Host   string `json:"host" mapstructure:"host"`
-	Port   int    `json:"port" mapstructure:"port"`
-	Https  bool   `json:"https" mapstructure:"https"`
-	Domain string `json:"domain" mapstructure:"domain"`
+	Addr  string `json:"addr" mapstructure:"addr"`
+	Https Https  `json:"https" mapstructure:"https"`
 
-	Cert string `json:"cert" mapstructure:"cert"`
-	Key  string `json:"key" mapstructure:"key"`
 	Home string `json:"home" mapstructure:"home" validate:"required"`
 }
 
-// type AnnymousConfig struct {
-// 	Enable  bool   `json:"enable" mapstructure:"enable"`
-// 	MaxSize string `json:"max_size" mapstructure:"max_size"`
-
-// 	Paths []PathRole `json:"paths" mapstructure:"paths"`
-// }
-
-type AnnymousConfig struct {
-	Enable bool   `json:"enable" mapstructure:"enable"`
-	Path   string `json:"path" mapstructure:"path"`
-	Mode   string `json:"mode" mapstructure:"mode"`
+type Https struct {
+	Domain string `json:"domain" mapstructure:"domain"`
+	Cert   string `json:"cert" mapstructure:"cert"`
+	Key    string `json:"key" mapstructure:"key"`
 }
 
 type Annymous struct {
-	Enable bool `json:"enable" mapstructure:"enable"`
-
-	PathRole
+	Enable bool       `json:"enable" mapstructure:"enable"`
+	Paths  []PathRole `json:"paths" mapstructure:"paths"`
 }
 
 type User struct {
@@ -46,6 +34,7 @@ type PathRole struct {
 	Mode string `json:"mode" mapstructure:"mode"`
 }
 
+// Valid check PathRole, and clean path
 func (pr *PathRole) Valid() bool {
 	if pr.Path == "" || pr.Mode == "" {
 		return false
@@ -77,7 +66,7 @@ func (pr *PathRole) HasPermit(p string, mode string) bool {
 
 // UserAuths user 对路径的权限
 type UserAuths struct {
-	User      User                `json:"user"`
+	User      `json:"user"`
 	PathRoles map[string]PathRole `json:"path_roles"`
 }
 
@@ -115,7 +104,8 @@ type CreateTokenParams struct {
 }
 
 type ServieConfig struct {
-	Server Server         `json:"server" mapstructure:"server"`
-	Users  []UserAuths    `json:"users" mapstructure:"users"`
-	Anny   AnnymousConfig `json:"anny" mapstructure:"anny"`
+	Server
+	Users []UserAuths `json:"users" mapstructure:"users"`
+	Any   Annymous    `json:"any" mapstructure:"any"`
+	// Admin User        `json:"admin" mapstructure:"admin"`
 }

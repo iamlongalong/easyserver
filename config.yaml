@@ -1,24 +1,27 @@
-server:
-  port: 8080
-  host: "0.0.0.0"
-  https: false
+addr: "0.0.0.0:8080"
+home: "."
+https:
+  domain: ""
   cert: ""
   key: ""
-  home: "."
 
-anny:
+any:
   enable: true
-  mode: "r"
-  path: ""
+  paths:
+    - path: "/path1/to/read"
+      mode: "r"
+    - path: "/path1/to/write"
+      mode: "w"
 
 users:
   - username: "admin"
     password: "admin"
     paths:
-      - path: "."
+      - path: "/path1/to/write"
         mode: "w"
   - username: "long"
     password: "longxxx"
     paths:
       - path: "./long"
         mode: "r"
+

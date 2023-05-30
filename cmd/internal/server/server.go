@@ -29,8 +29,6 @@ func Register(engine *gin.Engine) {
 	fileServer := http.FileServer(http.Dir(homeDir))
 	fileServer = http.StripPrefix("/", fileServer) // 去掉 URL 前面的斜杠
 
-	// 开启文件列表功能
-
 	engine.Use(AuthMiddleware()).
 		GET("/ping", func(ctx *gin.Context) {
 			ctx.JSON(200, gin.H{
@@ -161,15 +159,15 @@ func CreateToken(c *gin.Context) {
 	})
 }
 
-func Serve(server model.Server, uas []model.UserAuths, anny model.Annymous) {
+func Serve(s model.ServieConfig) {
 	// init user auths
-	err := InitUserAuths(uas)
+	err := InitUserAuths(s.Users)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// init annymous auths
-	err = InitAnnymousAuths(anny)
+	err = InitAnnymousAuths(s.Any)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,7 +178,7 @@ func Serve(server model.Server, uas []model.UserAuths, anny model.Annymous) {
 		log.Fatal(err)
 	}
 
-	homeDir = filepath.Base(server.Home)
+	homeDir = filepath.Base(s.Home)
 	// 检查 homeDir 是否存在，不存在则创建
 	fi, err := os.Stat(homeDir)
 	if err != nil {
@@ -198,21 +196,21 @@ func Serve(server model.Server, uas []model.UserAuths, anny model.Annymous) {
 	}
 
 	// 检查 https
-	if server.Https {
+	if s.Https.Cert != "" {
 		// 检查 https 证书
-		if server.Cert == "" || server.Key == "" {
+		if s.Https.Cert == "" || s.Https.Key == "" {
 			log.Fatal("https cert file or key file is empty")
 		}
 
 		// 检查 https 证书是否存在
-		_, err = os.Stat(server.Cert)
+		_, err = os.Stat(s.Https.Cert)
 		if err != nil {
-			log.Fatalf("https cert file [%s] not exist", server.Cert)
+			log.Fatalf("https cert file [%s] not exist", s.Https.Cert)
 		}
 
-		_, err = os.Stat(server.Key)
+		_, err = os.Stat(s.Https.Key)
 		if err != nil {
-			log.Fatalf("https key file [%s] not exist", server.Key)
+			log.Fatalf("https key file [%s] not exist", s.Https.Key)
 		}
 	}
 
@@ -224,32 +222,39 @@ func Serve(server model.Server, uas []model.UserAuths, anny model.Annymous) {
 	engine := gin.Default()
 	Register(engine)
 
-	addr := fmt.Sprintf("%s:%d", server.Host, server.Port)
-
 	// print users info
 	fmt.Println(banner)
-	for _, u := range uas {
+	for _, u := range s.Users {
 		proles := ""
-		for _, r := range u.PathRoles {
-			proles += fmt.Sprintf("%s:%s\t", r.Path, r.Mode)
+		for _, pr := range u.PathRoles {
+			proles += fmt.Sprintf("%s:%s\t", pr.Path, pr.Mode)
 		}
 
 		fmt.Printf("user: %s , paths:  %s\n", u.User.UserName, proles)
 	}
 	fmt.Println(banner)
-	if anny.Enable {
-		fmt.Printf("annymous user: %s:%s\n", anny.Path, anny.Mode)
+	if s.Any.Enable {
+		anyPaths := ""
+		for _, pr := range s.Any.Paths {
+			anyPaths += fmt.Sprintf("%s:%s\t", pr.Path, pr.Mode)
+		}
+
+		fmt.Printf("annymous user: %s\n", anyPaths)
 		fmt.Println(banner)
 	}
 
 	// print server info
-	log.Printf("server listen on %s", addr)
+	fmt.Printf("server listen on %s\n", s.Addr)
+
+	if s.Https.Domain != "" {
+		fmt.Printf("https domain: https://%s\n", s.Https.Domain)
+	}
 
 	// 设置 https
-	if server.Https {
-		err = engine.RunTLS(addr, server.Cert, server.Key)
+	if s.Https.Cert != "" {
+		err = engine.RunTLS(s.Addr, s.Https.Cert, s.Https.Key)
 	} else {
-		err = engine.Run(addr)
+		err = engine.Run(s.Addr)
 	}
 
 	if err != nil {

@@ -3,7 +3,9 @@ package server
 import (
 	"easyserver/cmd/internal/model"
 	"fmt"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -13,7 +15,7 @@ import (
 var userAuths = map[string]model.UserAuths{}
 
 // user token
-var userTokens = map[string]model.TokenAuth{}
+var userTokens = map[string]*model.TokenAuth{}
 var tokenLock = sync.Mutex{}
 
 // annymous auths
@@ -41,9 +43,14 @@ func InitUserTokens() error {
 
 // InitAnnymousAuths init annymous auths
 func InitAnnymousAuths(anny model.Annymous) error {
-	if anny.Enable && !anny.Valid() {
-		return errors.Errorf("invalid annymous auth: %s : %s", anny.Path, anny.Mode)
+	if anny.Enable {
+		for _, pr := range anny.Paths {
+			if !pr.Valid() {
+				return errors.Errorf("invalid role [%s %s]", pr.Path, pr.Mode)
+			}
+		}
 	}
+
 	annymousAuths = anny
 	return nil
 }
@@ -64,7 +71,7 @@ func createToken(u *model.User, t model.TokenAuth) error {
 
 	// register token
 	tokenLock.Lock()
-	userTokens[t.Token] = t
+	userTokens[t.Token] = &t
 	tokenLock.Unlock()
 
 	return nil
@@ -131,9 +138,15 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// check token auth
 		token := c.Request.URL.Query().Get("token")
-		if tokenAuth(token, path, needRoleMode) {
-			c.Next()
-			return
+
+		if token != "" {
+			err := tokenAuth(token, path, needRoleMode)
+			if err != nil {
+				c.Next()
+				return
+			}
+
+			log.Printf("token [%s] auth fail: %s", token, err)
 		}
 
 		c.Header("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -166,27 +179,42 @@ func annymousAuth(path string, mode string) bool {
 		return false
 	}
 
-	if annymousAuths.HasPermit(path, mode) {
-		return true
-	}
-
-	return false
-}
-
-// tokenAuth
-func tokenAuth(token string, path string, mode string) bool {
-	tokenLock.Lock()
-	tokenAuth, ok := userTokens[token]
-	tokenLock.Unlock()
-	if !ok {
-		return false
-	}
-
-	for _, pathRole := range tokenAuth.PathRoles {
+	for _, pathRole := range annymousAuths.Paths {
 		if pathRole.HasPermit(path, mode) {
 			return true
 		}
 	}
 
 	return false
+}
+
+// tokenAuth
+func tokenAuth(token string, path string, mode string) error {
+	tokenLock.Lock()
+	tokenAuth, ok := userTokens[token]
+	tokenLock.Unlock()
+	if !ok {
+		return errors.Errorf("token [%s] not found", token)
+	}
+
+	for _, pathRole := range tokenAuth.PathRoles {
+		if pathRole.HasPermit(path, mode) {
+			if mode == "w" {
+
+				if tokenAuth.UploadUsedCount >= tokenAuth.UploadCountLimit {
+					return errors.Errorf("token [%s] upload count limit", token)
+				}
+
+				if tokenAuth.SignAt.Add(tokenAuth.Duration).Before(time.Now()) {
+					return errors.Errorf("token [%s] expired", token)
+				}
+
+				tokenAuth.UploadUsedCount++
+			}
+
+			return nil
+		}
+	}
+
+	return errors.Errorf("token [%s] not have path [%s] auth", token, path)
 }

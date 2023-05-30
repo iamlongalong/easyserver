@@ -1,0 +1,196 @@
+/*
+Copyright © 2023 NAME HERE <EMAIL ADDRESS>
+*/
+package cmd
+
+import (
+	"easyserver/cmd/internal/model"
+	"easyserver/cmd/internal/server"
+	"fmt"
+	"log"
+	"path/filepath"
+	"strings"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	configFile *string
+	addr       *string
+	httpsStr   *string
+	homeDir    *string
+	anyStr     *string
+	usersStrs  *[]string
+	daemon     *bool
+)
+
+func init() {
+	rootCmd.AddCommand(serveCmd)
+
+	// Define a flag for the configuration file
+	configFile = serveCmd.PersistentFlags().StringP("config", "c", "", "Config file path, eg: --addr /etc/easyserver.yaml")
+
+	addr = serveCmd.PersistentFlags().String("addr", "0.0.0.0:8080", "Server addr, eg: --addr 127.0.0.1:443")
+
+	httpsStr = serveCmd.PersistentFlags().String("https", "", "Server use https, eg: --https file.longalong.com:/path/to/cert.pem:/path/to/key.pem")
+
+	homeDir = serveCmd.PersistentFlags().String("home", "", "server home dir, eg: --home .")
+
+	// 匿名访问
+	anyStr = serveCmd.PersistentFlags().String("any", "", `enable annymous user, eg: --any r:/path1,w:path2 (mode: r: read, w: write)`)
+
+	// 用户认证
+	usersStrs = serveCmd.Flags().StringArray("user", []string{}, `users auth, eg: --user username:password:r:/path/to/dir:w:/path2 (r: read, w: write)`)
+
+	// 后台运行
+	// daemon = serveCmd.PersistentFlags().BoolP("daemon", "d", false, "run as daemon, eg: -d")
+
+}
+
+var (
+	dfvalidator = validator.New()
+)
+
+// serveCmd represents the server command
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "start file server",
+	Long: `server usage:
+
+default: 
+				easyserver serve .
+
+with host and port: 
+				easyserver serve . --addr 0.0.0.0:8081
+
+with users:
+				easyserver serve . --user username:password:r:/path/to/dir:w:/path2
+
+				multi users: --user user1:password:r:/path/to/dir:w:/path2 --user user2:password:r:/path/to/dir:w:/path2
+
+	`,
+	Run: func(cmd *cobra.Command, args []string) {
+
+		serviceConfig := model.ServieConfig{}
+
+		// bind config to serverConfig
+		if *configFile != "" {
+			viper.SetConfigFile(*configFile)
+			err := viper.ReadInConfig()
+			if err != nil {
+				log.Fatal(errors.Wrap(err, "read config error"))
+			}
+		}
+
+		// bind args 1 to homedir if homedir is nil
+		if *homeDir == "" && len(args) > 0 {
+			*homeDir = args[0]
+		}
+
+		// bind config file to service config
+		err := viper.Unmarshal(&serviceConfig)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "unmarshal config error"))
+		}
+
+		// bind flag to service config
+
+		// convert user config
+		for _, usrStr := range *usersStrs {
+			usr := strings.Split(usrStr, ":")
+			user := model.User{}
+			auths := model.UserAuths{
+				PathRoles: map[string]model.PathRole{},
+			}
+
+			if len(usr) < 2 {
+				log.Fatal(errors.Errorf("invalid user format: %s", usrStr))
+			}
+
+			user.UserName = usr[0]
+			user.Password = usr[1]
+
+			auths.User = user
+
+			switch len(usr) {
+			case 2:
+				// 默认为 write / 权限
+				auths.PathRoles["/"] = model.PathRole{Path: "/", Mode: "w"}
+
+			default:
+				// 参数数量必须为偶数
+				if len(usr)%2 != 0 {
+					log.Fatal(errors.Errorf("invalid user format: %s", usrStr))
+				}
+
+				for i := 2; i < len(usr); i += 2 {
+					auths.PathRoles[usr[i]] = model.PathRole{Path: usr[i], Mode: usr[i+1]}
+				}
+
+			}
+
+			serviceConfig.Users = append(serviceConfig.Users, auths)
+		}
+
+		// bind server config
+		if *addr != "" {
+			serviceConfig.Server.Addr = *addr
+		}
+
+		if *httpsStr != "" {
+			https := strings.Split(*httpsStr, ":")
+			if len(https) != 3 {
+				log.Fatal(errors.Errorf("invalid https format: %s", *httpsStr))
+			}
+			serviceConfig.Server.Https = model.Https{
+				Domain: https[0],
+				Cert:   https[1],
+				Key:    https[2],
+			}
+		}
+
+		if *homeDir != "" {
+			serviceConfig.Server.Home = filepath.Clean(*homeDir)
+		}
+
+		if *anyStr != "" {
+			anys := strings.Split(*anyStr, ":")
+
+			// any 的参数需要为偶数
+			if len(anys)%2 != 0 {
+				log.Fatal(errors.Errorf("invalid any format: %s", *anyStr))
+			}
+
+			serviceConfig.Any.Enable = true
+
+			for i := 0; i < len(anys); i += 2 {
+				serviceConfig.Any.Paths = append(serviceConfig.Any.Paths,
+					model.PathRole{Path: anys[i], Mode: anys[i+1]},
+				)
+			}
+		}
+
+		// 若无 user， 则默认创建一个 admin
+		if len(serviceConfig.Users) == 0 {
+
+			serviceConfig.Users = append(serviceConfig.Users,
+				model.UserAuths{
+					User:      model.User{UserName: "admin", Password: "easyadmin123"},
+					PathRoles: map[string]model.PathRole{"/": {Path: "/", Mode: "w"}},
+				},
+			)
+
+			fmt.Printf("no user setted, using default user:  admin:easyadmin123:w:/ 🤐 \n\n")
+		}
+
+		err = dfvalidator.Struct(serviceConfig)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "validate config error"))
+		}
+
+		server.Serve(serviceConfig)
+	},
+}
