@@ -1,0 +1,84 @@
+------
+
+> 以下是一开始的想法，后来觉得太复杂了，先做一个最简单的版本吧
+
+
+当我们希望把某个文件夹暴露到网络上，形成一个简单的 static server 时，常用的做法是 nginx 指定 root 地址，例如：
+
+```nginx
+server {
+    listen          80;
+    server_name     _;
+    root    /usr/share/nginx/html;
+    index   index.html index.htm;
+    location / {
+        try_files $uri $uri/ /index.html?$args;
+    }
+}
+```
+
+nginx 有很多强大的功能，毕竟是一个 生产级 超强网关。
+
+有时候，我们只需要一个很简单的命令行工具，快速方便地实现启动一个 http server，核心思想就是: 简单、方便、基础能力
+
+使用设计:
+
+```bash
+hs serve . # 默认 serve 当前目录到 0.0.0.0:80
+hs serve --auth admin:passadmin:rw --auth viever:passviewer:r  # 指定 ACL 的权限， r 为可查看，w 为可上传
+hs serve --path /ximg:./data/img --path /:./data/ # 指定映射的路径，例如 /ximg:./data/img 意味着 把 ./data/img 下的文件通过 /ximg 这个 http 路径访问
+hs serve --https ./certs/xx.pem:./certs/xx.key # 指定 https 的证书文件
+hs serve --host 127.0.0.1 --port 8080 # 指定 serve 的ip及端口
+hs serve --upload ./data/upload # 指定文件上传的路径
+hs serve --log ./log # 指定日志文件的路径
+hs serve . -d # 后台运行
+hs serve . --dash # 运行管理后台 ( / 会跳转到 /_dash/ )
+hs serve . --nohidding # 所有 _xx 文件 和 .xx 文件 都会显示出来 (默认不会获取到隐藏文件)
+hs serve . --insecure # 非安全模式，无需鉴权，默认所有人均有查看权限，但上传依然需要鉴权
+```
+
+权限部分：
+权限是一个很重要的方面，服务从全局提供 ACL 的鉴权机制，同时提供 token 的辅助方式，优先检查 ACL 权限，再检查 token 权限。
+token 的实现采用 jwt 的方式。
+同时，为了能够防止 jwt 生成的 token 泄漏问题，需要提供接口删除特定的 token。
+
+
+为了保证 upload 的安全性，需要显式生成 token
+
+```bash
+curl http://127.0.0.1:8080/_api/token -d '{"action": "","path": "", "file": "", "maxsize": "", "expire": "3h", "reuse": 5, "user": ""}'
+
+# action 为操作类型，仅有 read、write 两类，read 以为可以查看文件，write 为可以上传文件，为空意味着均有权限
+# path 为对特定的上传地址开放，为空意味着对所有地址均无限制
+# file 为仅开放特定文件名上传，为空意味着对所有文件名均无限制
+# maxsize 为单次上传最大 size, 使用 5MB、1GB 这种格式
+# expire token 失效的时间，使用 m、h、d 这三种单位
+# reuse 可重复使用的次数(上传次数限制)
+# user 对特定 user 开放
+
+# 接口的返回值为生成的 token 值
+```
+
+为了可以查看文件信息，需要提供接口实现
+```bash
+curl "http://127.0.0.1:8080/_api/list?path=/img/xx&token=xxxx&page_size=20&page_count=1"
+
+# path 为要 list 的路径地址，上面意味着访问 /img/xx 这个路径下的文件
+# token 为鉴权，若已经有 basic auth 的 ACL 鉴权，或者服务为 insecure 模式，则可以省略
+# page_size 为分页的每页数量
+# page_count 为当前为第几页
+
+# 接口的返回值为
+# {"data": [{"Name": "xxx", "Type": "dir", "CreatedAt": "2021-02-21 12:31", "ModifiedAt": "2021-02-22 11:21"}], "page_count": 1, "pages": 4}
+```
+
+内部接口将使用 `/_api` 为根路径，需要提供的能力有：
+```
+/_api/token 用于生成访问的 token
+
+/_api/list 用于获取文件信息
+```
+
+为了提供便利性，提供一个简单的 web 页面，可用于上传、下载、查看文件。
+
+
