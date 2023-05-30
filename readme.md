@@ -1,6 +1,5 @@
 ## easyserver
 
-
 ## 先跑起来吧
 
 ```bash
@@ -73,13 +72,32 @@ curl -X DELETE 'http://admin:easyadmin123@127.0.0.1:8080/_token?all=true'
 ## 如何安装
 
 ```bash
-go get -u github.com/iamlongalong/easyserver
+# 如果你用 golang 环境
+go install github.com/iamlongalong/easyserver
+
+# 如果你通过 github 下载
+# 1. 到页面 https://github.com/iamlongalong/easyserver/releases
+# 2. 下载一个正确的版本
+# 3. 移动到 PATH 下，eg: sudo mv easyserver-darwin-amd64 /usr/local/bin/easyserver
+# 4. 开始使用  easyserver serve .
+
+# 如果你想通过脚本一键安装，可以使用 (当然，前提是你能访问下面的地址……)
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/iamlongalong/easyserver/master/update-easyserver.sh)"
+
+# 所以，给一个国内的地址
+sudo bash -c "$(curl -fsSL https://static.longalong.cn/scripts/get-easyserver.sh)"
+
+# 如果你想通过 docker 安装
+docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/easyserver easyserver serve /data
+
+# then just enjoy your life ~
+
 ```
 
 
 ## 已经实现的功能
 
-先做一个最基本的版本，仅实现下面的基本功能
+先做一个最基本的版本，仅实现下面的基本功能：
 
 - [x] 提供一个简单的 http server，可以指定端口、ip、根目录
 - [x] 可以指定一个上传目录，可以上传文件到指定目录
@@ -90,6 +108,14 @@ go get -u github.com/iamlongalong/easyserver
 - [x] 可以指定 https 的证书文件
 - [x] 可以通过 config 文件配置，也可以通过命令行参数配置
 
+后面大概率会加上的功能：
+
+- [ ] 一个简单的 dashboard，用于创建 token、查看 token、删除 token
+- [ ] dashboard 中可以 list、delete 文件及目录、上传文件及目录
+
+其他 todo:
+
+- [ ] 使用的 demo 放一个 gif 图
 
 > 以上是最基本的功能
 
