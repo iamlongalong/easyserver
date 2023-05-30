@@ -24,3 +24,5 @@ easyserver
 .vscode
 
 __debug_bin
+
+build/
