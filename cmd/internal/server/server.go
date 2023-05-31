@@ -42,9 +42,7 @@ func Register(engine *gin.Engine) {
 	engine.NoRoute(func(c *gin.Context) {
 		// GET 为 static file server
 		if c.Request.Method == "GET" {
-			gin.WrapF(func(w http.ResponseWriter, r *http.Request) {
-				fileServer.ServeHTTP(w, r)
-			})(c)
+			gin.WrapF(fileServer.ServeHTTP)(c)
 			return
 		}
 
@@ -59,7 +57,9 @@ func Register(engine *gin.Engine) {
 				return
 			}
 
-			filename := filepath.Join(homeDir, c.Request.URL.Path)
+			relativePath := filepath.Join("/", filepath.Clean(c.Request.URL.Path))
+
+			filename := filepath.Join(homeDir, relativePath)
 
 			// 保存文件
 			err = c.SaveUploadedFile(file, filename)

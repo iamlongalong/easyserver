@@ -131,3 +131,8 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 如果，你还想上传文件到服务器 (通过 rest api 接口)，那么也可以用这个工具。
 
 - [ ] 梳理更多的应用场景
+
+
+## 关于界面的基本梳理
+
+使用这个工具，最直接的场景，是在浏览器端直接打开
