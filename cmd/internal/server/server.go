@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/iamlongalong/easyserver/assets"
 	"github.com/iamlongalong/easyserver/cmd/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -28,9 +30,10 @@ var homeDir = "/tmp/easyserver"
 func Register(engine *gin.Engine) {
 
 	fileServer := http.FileServer(http.Dir(homeDir))
-	fileServer = http.StripPrefix("/", fileServer) // 去掉 URL 前面的斜杠
 
-	engine.Use(AuthMiddleware()).
+	engine.Use(AuthMiddleware())
+
+	engine.
 		GET("/ping", func(ctx *gin.Context) {
 			ctx.JSON(200, gin.H{
 				"message": "pong",
@@ -39,10 +42,39 @@ func Register(engine *gin.Engine) {
 		POST("/_token", CreateToken).
 		DELETE("/_token", DeleteToken)
 
+	// f := gin.WrapH(http.FileServer(http.FS(assetsFS)))
+
+	engine.Group("/_dash").Any("/*fp", func(ctx *gin.Context) {
+		fp := ctx.Param("fp")
+		if fp == "/" || fp == "/index.html" {
+			fn := "/_dash/index.html"
+
+			f, err := http.FS(assets.DashBoardFS).Open(fn)
+			if err != nil {
+				ctx.AbortWithError(500, err)
+				return
+			}
+
+			ctx.Writer.WriteHeader(200)
+			ctx.Writer.Header().Set("Content-Type", "text/html")
+			_, err = io.Copy(ctx.Writer, f)
+			if err != nil {
+				ctx.AbortWithError(500, err)
+				return
+			}
+		} else {
+			gin.WrapH(http.FileServer(http.FS(assets.DashBoardFS)))(ctx)
+		}
+	})
+
+	homedirServe := gin.WrapH(fileServer)
 	engine.NoRoute(func(c *gin.Context) {
+		fmt.Println("no route???")
 		// GET 为 static file server
-		if c.Request.Method == "GET" {
-			gin.WrapF(fileServer.ServeHTTP)(c)
+		if c.Request.Method == "GET" || c.Request.Method == "HEAD" {
+			c.Writer.WriteHeader(200) // fix the gin write status 404
+
+			homedirServe(c)
 			return
 		}
 

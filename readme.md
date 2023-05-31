@@ -112,6 +112,7 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 
 - [ ] 一个简单的 dashboard，用于创建 token、查看 token、删除 token
 - [ ] dashboard 中可以 list、delete 文件及目录、上传文件及目录
+- [ ] 支持生成自签证书
 
 其他 todo:
 
@@ -136,3 +137,36 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 ## 关于界面的基本梳理
 
 使用这个工具，最直接的场景，是在浏览器端直接打开
+
+存在 3 种鉴权方式: basic auth, token
+
+目前采用的 在 response header 中添加 `WWW-Authenticate` 的方式，让浏览器弹出 basic auth 的窗口。这是最基础的做法。
+
+如果使用的 dashboard 页面，这种方式则不完全适用于 token 的模式，因此，要兼容使用 dashboard 时不弹出弹窗，而是由用户自己决定如何认证。
+
+使用流程如下：
+- 打开 dashboard 页面
+- 初始打开页面时，鉴权(`/_api/user`)，若 401 ，则可设置鉴权类型 (① basic auth ② token ③ annymous)，若正常，则直接进入主页面
+- 设置鉴权类型后，页面未重新加载前不再主动弹鉴权窗口
+
+dashboard 需要提供如下能力：
+- 更好看的 list dir
+- 更好看的 查看文本、图片
+- 更好看的 download
+  - 复制下载链接
+  - 批量下载?
+- 更好用的 token 管理 (增删改查)
+- 更好看的 upload 界面 (这个最重要)
+  - 好用的选择方式
+  - 批量上传
+  - 断点续传
+
+### 还是第一期做最需要的功能吧
+
+- [ ] 认证
+- [ ] upload
+- [ ] list
+
+### 技术选型
+
+为了简单，直接用 vue + element plus 的方式，先做一版吧，跑起来看看先 🏃🏻‍♀️🏃🏻‍♀️🏃🏻‍♀️
