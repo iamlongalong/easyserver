@@ -39,7 +39,7 @@
           <div
             style="height: 60vh; position: relative; background-color: #efefef"
           >
-            <div style="margin: 15px 0 15px 15px; height: inherit">
+            <div style="height: inherit">
               <div v-if="files.length == 0" style="height: inherit">
                 <el-row
                   :gutter="20"
@@ -47,18 +47,19 @@
                   align="middle"
                   style="height: inherit"
                 >
-                <el-col :offset="0">
-                  <div style="padding: 20px 0;">
-                    <p style="font-size: 1.5rem; color: #aaa;">no files in this folder</p>
-                  </div>
-  
-                  <div>
-                    <el-button type="primary" @click="goBack"
-                      >返回上一级</el-button
-                    >
-                  </div>
-                </el-col>
-                
+                  <el-col :offset="0">
+                    <div style="padding: 0">
+                      <p style="font-size: 1.5rem; color: #aaa">
+                        no files in this folder
+                      </p>
+                    </div>
+
+                    <div>
+                      <el-button type="primary" @click="goBack"
+                        >返回上一级</el-button
+                      >
+                    </div>
+                  </el-col>
                 </el-row>
               </div>
 
@@ -66,7 +67,8 @@
                 v-if="files.length != 0"
                 style="height: 60vh; overflow-y: auto; overflow-x: hidden"
               >
-                <el-row :gutter="20" justify="start">
+              <div style="padding: 15px 20px;">
+                <el-row :gutter="20" justify="space-between">
                   <div
                     v-for="(file, index) in files"
                     :key="index"
@@ -81,6 +83,7 @@
                   </div>
                 </el-row>
               </div>
+              </div>
             </div>
           </div>
         </el-col>
@@ -91,7 +94,6 @@
         @close="handleClose"
         v-model="upload.show"
         title=""
-        width="80%"
         align-center
       >
         <div>
@@ -103,10 +105,17 @@
             multiple
             :http-request="uploadFile"
           >
-            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-            <div class="el-upload__text">
-              Drop file here or <em>click to upload</em>
-            </div>
+            <el-row
+              style="height: 30vh"
+              :gutter="20"
+              justify="center"
+              align="middle"
+            >
+              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+              <div class="el-upload__text">
+                Drop file here or <em>click to upload</em>
+              </div>
+            </el-row>
           </el-upload>
         </div>
       </el-dialog>
