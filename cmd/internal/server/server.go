@@ -2,13 +2,16 @@ package server
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
+	"github.com/iamlongalong/easyserver/assets"
 	"github.com/iamlongalong/easyserver/cmd/internal/model"
 
 	"github.com/gin-gonic/gin"
@@ -25,24 +28,132 @@ var (
 // home dir
 var homeDir = "/tmp/easyserver"
 
+func CorsMiddleware() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		ctx.Writer.Header().Set("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT,OPTIONS")
+		ctx.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type,Content-Length,Accept-Encoding,X-CSRF-Token,Authorization")
+		ctx.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if ctx.Request.Method == "OPTIONS" {
+			ctx.AbortWithStatus(204)
+			return
+		}
+
+		ctx.Next()
+	}
+}
+
+// get file infos from path
+func handleGetFileInfos(c *gin.Context) {
+	path := c.Param("path")
+
+	tarDir := filepath.Join(homeDir, filepath.Join("/", filepath.Clean(path)))
+	// list files of tarDir
+
+	dir, err := os.Open(tarDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.JSON(200, gin.H{
+				"data": []string{},
+			})
+			return
+		}
+
+		c.JSON(500, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	fileInfos, err := dir.Readdir(-1)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	resFileInfos := []model.ResFileInfo{}
+
+	// convert to file info
+	for _, fi := range fileInfos {
+		// 过滤所有 隐藏文件
+		if strings.HasPrefix(fi.Name(), ".") {
+			continue
+		}
+
+		fileType := ""
+
+		if fi.IsDir() {
+			fileType = "folder"
+		} else {
+			fileType = convertExtContentType(filepath.Ext(fi.Name()))
+		}
+
+		resFileInfos = append(resFileInfos, model.ResFileInfo{
+			Name:         fi.Name(),
+			Size:         fi.Size(),
+			ModTimeStamp: fi.ModTime().UnixMilli(),
+			IsDir:        fi.IsDir(),
+			FileType:     fileType,
+		})
+	}
+
+	c.JSON(200, gin.H{
+		"message": "ok",
+		"data":    resFileInfos,
+	})
+}
+
 func Register(engine *gin.Engine) {
 
 	fileServer := http.FileServer(http.Dir(homeDir))
-	fileServer = http.StripPrefix("/", fileServer) // 去掉 URL 前面的斜杠
 
-	engine.Use(AuthMiddleware()).
+	engine.Use(CorsMiddleware()).Use(AuthMiddleware())
+
+	engine.
 		GET("/ping", func(ctx *gin.Context) {
 			ctx.JSON(200, gin.H{
 				"message": "pong",
 			})
 		}).
+		GET("/_apilist/*path", handleGetFileInfos).
 		POST("/_token", CreateToken).
 		DELETE("/_token", DeleteToken)
 
+	// f := gin.WrapH(http.FileServer(http.FS(assetsFS)))
+
+	engine.Group("/_dash").Any("/*fp", func(ctx *gin.Context) {
+		fp := ctx.Param("fp")
+		if fp == "/" || fp == "/index.html" {
+			fn := "/_dash/index.html"
+
+			f, err := http.FS(assets.DashBoardFS).Open(fn)
+			if err != nil {
+				ctx.AbortWithError(500, err)
+				return
+			}
+
+			ctx.Writer.WriteHeader(200)
+			ctx.Writer.Header().Set("Content-Type", "text/html")
+			_, err = io.Copy(ctx.Writer, f)
+			if err != nil {
+				ctx.AbortWithError(500, err)
+				return
+			}
+		} else {
+			gin.WrapH(http.FileServer(http.FS(assets.DashBoardFS)))(ctx)
+		}
+	})
+
+	homedirServe := gin.WrapH(fileServer)
 	engine.NoRoute(func(c *gin.Context) {
 		// GET 为 static file server
-		if c.Request.Method == "GET" {
-			gin.WrapF(fileServer.ServeHTTP)(c)
+		if c.Request.Method == "GET" || c.Request.Method == "HEAD" {
+			c.Writer.WriteHeader(200) // fix the gin write status 404
+
+			homedirServe(c)
 			return
 		}
 
@@ -70,7 +181,7 @@ func Register(engine *gin.Engine) {
 				return
 			} else {
 				c.JSON(http.StatusOK, gin.H{
-					"message": fmt.Sprintf("'%s' upload success", filename),
+					"message": fmt.Sprintf("'%s' upload success", relativePath),
 				})
 				return
 			}
@@ -78,7 +189,8 @@ func Register(engine *gin.Engine) {
 
 		// DELETE 为删除文件
 		if c.Request.Method == "DELETE" {
-			filename := filepath.Join(homeDir, c.Request.URL.Path)
+			relativePath := filepath.Join("/", filepath.Clean(c.Request.URL.Path))
+			filename := filepath.Join(homeDir, relativePath)
 			err := os.RemoveAll(filename)
 			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
@@ -87,7 +199,7 @@ func Register(engine *gin.Engine) {
 				return
 			} else {
 				c.JSON(http.StatusOK, gin.H{
-					"message": fmt.Sprintf("'%s' delete success", filename),
+					"message": fmt.Sprintf("'%s' delete success", relativePath),
 				})
 				return
 			}
@@ -298,4 +410,48 @@ func randString(n int) string {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))] //nolint:gosec
 	}
 	return string(b)
+}
+
+// convert content-type to: "image", "video", "audio", "text", "bin"
+func convertContentType(contentType string) string {
+	contentType = strings.ToLower(contentType)
+	if strings.Contains(contentType, "image") {
+		return "image"
+	}
+
+	if strings.Contains(contentType, "video") {
+		return "video"
+	}
+
+	if strings.Contains(contentType, "audio") {
+		return "audio"
+	}
+
+	if strings.Contains(contentType, "text") {
+		return "text"
+	}
+
+	return "file"
+}
+
+// 通过文件后缀，判断文件类型
+func convertExtContentType(ext string) string {
+	ext = strings.ToLower(ext)
+	if strings.Contains(ext, "jpg") || strings.Contains(ext, "jpeg") || strings.Contains(ext, "png") {
+		return "image"
+	}
+
+	if strings.Contains(ext, "mp4") || strings.Contains(ext, "avi") || strings.Contains(ext, "mov") {
+		return "video"
+	}
+
+	if strings.Contains(ext, "mp3") || strings.Contains(ext, "wav") {
+		return "audio"
+	}
+
+	if strings.Contains(ext, "txt") || strings.Contains(ext, "md") || strings.Contains(ext, "html") {
+		return "text"
+	}
+
+	return "file"
 }

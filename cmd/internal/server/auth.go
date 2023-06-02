@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -113,6 +114,11 @@ func AuthMiddleware() gin.HandlerFunc {
 		// 检查接口是否需要权限， 和 / 拼接，保证所有的路径都在 homedir 之下
 		path := filepath.Join("/", filepath.Clean(c.Request.URL.Path))
 		method := c.Request.Method
+
+		// 如果是 _apilist 的接口，则把 path 设置为 parmam("path")
+		if strings.HasPrefix(path, "/_apilist") {
+			path = filepath.Join("/", strings.TrimPrefix(path, "/_apilist"))
+		}
 
 		needRoleMode := ReadMode
 		if method == "POST" || method == "PUT" || method == "DELETE" {

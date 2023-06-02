@@ -23,7 +23,7 @@ var (
 	addr       *string
 	httpsStr   *string
 	homeDir    *string
-	anyStr     *string
+	anyStr     string
 	usersStrs  *[]string
 	daemon     *bool
 )
@@ -34,17 +34,20 @@ func init() {
 	// Define a flag for the configuration file
 	configFile = serveCmd.PersistentFlags().StringP("config", "c", "", "Config file path, eg: --addr /etc/easyserver.yaml")
 
-	addr = serveCmd.PersistentFlags().String("addr", "0.0.0.0:8080", "Server addr, eg: --addr 127.0.0.1:443")
+	addr = serveCmd.Flags().String("addr", "0.0.0.0:8080", "Server addr, eg: --addr 127.0.0.1:443")
 
-	httpsStr = serveCmd.PersistentFlags().String("https", "", "Server use https, eg: --https file.longalong.com:/path/to/cert.pem:/path/to/key.pem")
+	httpsStr = serveCmd.Flags().String("https", "", "Server use https, eg: --https file.longalong.com:/path/to/cert.pem:/path/to/key.pem")
 
-	homeDir = serveCmd.PersistentFlags().String("home", "", "server home dir, eg: --home .")
+	homeDir = serveCmd.Flags().String("home", "", "server home dir, eg: --home .")
 
 	// 匿名访问
-	anyStr = serveCmd.PersistentFlags().String("any", "", `enable annymous user, eg: --any r:/path1,w:path2 (mode: r: read, w: write)`)
+	serveCmd.Flags().StringVar(&anyStr, "any", "", `enable annymous user (defult diasble), eg: --any=r:/path1,w:path2 (mode: r: read, w: write), and '--any' equals '--any=r:/'`)
 
 	// 用户认证
 	usersStrs = serveCmd.Flags().StringArray("user", []string{}, `users auth, eg: --user username:password:r:/path/to/dir:w:/path2 (r: read, w: write)`)
+
+	// 若开启匿名访问，默认为 / r 权限
+	serveCmd.Flags().Lookup("any").NoOptDefVal = "r:/"
 
 	// 后台运行
 	// daemon = serveCmd.PersistentFlags().BoolP("daemon", "d", false, "run as daemon, eg: -d")
@@ -74,9 +77,9 @@ with users:
 
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		serviceConfig := model.ServieConfig{}
 
+		var err error
 		// bind config to serverConfig
 		if *configFile != "" {
 			viper.SetConfigFile(*configFile)
@@ -92,7 +95,7 @@ with users:
 		}
 
 		// bind config file to service config
-		err := viper.Unmarshal(&serviceConfig)
+		err = viper.Unmarshal(&serviceConfig)
 		if err != nil {
 			log.Fatal(errors.Wrap(err, "unmarshal config error"))
 		}
@@ -157,20 +160,23 @@ with users:
 			serviceConfig.Server.Home = filepath.Clean(*homeDir)
 		}
 
-		if *anyStr != "" {
-			anys := strings.Split(*anyStr, ":")
+		if anyStr != "" {
+			anyPRs := strings.Split(anyStr, ",")
+			for _, annStr := range anyPRs {
+				anys := strings.Split(annStr, ":")
 
-			// any 的参数需要为偶数
-			if len(anys)%2 != 0 {
-				log.Fatal(errors.Errorf("invalid any format: %s", *anyStr))
-			}
+				// any 的参数需要为偶数
+				if len(anys)%2 != 0 {
+					log.Fatal(errors.Errorf("invalid any format: %s", annStr))
+				}
 
-			serviceConfig.Any.Enable = true
+				serviceConfig.Any.Enable = true
 
-			for i := 0; i < len(anys); i += 2 {
-				serviceConfig.Any.Paths = append(serviceConfig.Any.Paths,
-					model.PathRole{Path: anys[i], Mode: anys[i+1]},
-				)
+				for i := 0; i < len(anys); i += 2 {
+					serviceConfig.Any.Paths = append(serviceConfig.Any.Paths,
+						model.PathRole{Mode: anys[i], Path: anys[i+1]},
+					)
+				}
 			}
 		}
 
