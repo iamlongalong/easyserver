@@ -151,6 +151,7 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 
 dashboard 需要提供如下能力：
 - 更好看的 list dir
+  - 支持排序
 - 更好看的 查看文本、图片
 - 更好看的 download
   - 复制下载链接
