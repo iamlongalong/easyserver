@@ -1,5 +1,47 @@
 ## easyserver
 
+## 这是个啥？
+
+如果你想上传一个文件到服务器，你有什么方式？
+
+- ftp
+- scp ?
+- ???
+
+ftp 是常用的。你可以选择传统的 ftp server，例如 vsftpd.
+
+但 ftp server 上传文件，认证方式是通过用户名和密码，你需要为每个用户设置一个密码，然后把密码告诉用户，用户才能上传文件。
+
+如果你想让用户上传文件，但不想让用户知道密码，那么你可以使用 token 的方式。
+
+于是，这个工具就诞生了。
+
+这是一个可以支持 user-pass、token、annymous 认证的 http server，拥有如下能力：
+
+- 上传文件
+- 下载文件
+- 查看文件目录
+
+对，都是很基础的功能，但是，这个工具可以让你更方便地使用这些功能。
+
+比如，在 浏览器中，直接访问 `http://xxx.xxx.xx/_dash`， 你就能看到类似下面的页面：
+
+![dashboard](./doc/dash_info1.jpeg)
+
+像这样上传:
+
+![upload](./doc/dash_info2.png)
+
+像这样做认证:
+
+![auth](./doc/dash_info3.png)
+
+可以像这样查看文件:
+
+![view](./doc/dash_info4.png)
+
+快玩起来吧 🍻🍻🍻
+
 ## 先跑起来吧
 
 ```bash
