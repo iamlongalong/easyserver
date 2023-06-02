@@ -1,15 +1,14 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App" />
+  <HomePage />
 </template>
 
 <script lang="ts">
 import { Options, Vue } from "vue-class-component";
-import HelloWorld from "./components/HelloWorld.vue";
+import HomePage from "./components/HomePage.vue";
 
 @Options({
   components: {
-    HelloWorld,
+    HomePage,
   },
 })
 export default class App extends Vue {}
@@ -23,5 +22,6 @@ export default class App extends Vue {}
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+  height: 100%;
 }
 </style>

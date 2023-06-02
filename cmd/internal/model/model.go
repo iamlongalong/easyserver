@@ -109,3 +109,11 @@ type ServieConfig struct {
 	Any   Annymous    `json:"any" mapstructure:"any"`
 	// Admin User        `json:"admin" mapstructure:"admin"`
 }
+
+type ResFileInfo struct {
+	Name         string `json:"name"`
+	Size         int64  `json:"size"`
+	IsDir        bool   `json:"is_dir"`
+	ModTimeStamp int64  `json:"mod_time"`
+	FileType     string `json:"file_type"`
+}

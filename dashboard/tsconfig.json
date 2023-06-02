@@ -14,12 +14,13 @@
     "sourceMap": true,
     "baseUrl": ".",
     "types": [
-      "webpack-env"
+      "webpack-env",
+      "element-plus/global"
     ],
     "paths": {
       "@/*": [
         "src/*"
-      ]
+      ],
     },
     "lib": [
       "esnext",

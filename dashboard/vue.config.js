@@ -1,6 +1,6 @@
 const { defineConfig } = require("@vue/cli-service");
 module.exports = defineConfig({
   transpileDependencies: true,
-  outputDir: "../_dash/",
+  outputDir: "../assets/_dash/",
   publicPath: "/_dash/",
 });
