@@ -6,11 +6,14 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
 	"github.com/iamlongalong/easyserver/cmd/internal/model"
 	"github.com/iamlongalong/easyserver/cmd/internal/server"
+	"github.com/kardianos/service"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/pkg/errors"
@@ -50,7 +53,7 @@ func init() {
 	serveCmd.Flags().Lookup("any").NoOptDefVal = "r:/"
 
 	// 后台运行
-	// daemon = serveCmd.PersistentFlags().BoolP("daemon", "d", false, "run as daemon, eg: -d")
+	daemon = serveCmd.PersistentFlags().BoolP("daemon", "d", false, "run as daemon, eg: -d")
 
 }
 
@@ -198,6 +201,58 @@ with users:
 			log.Fatal(errors.Wrap(err, "validate config error"))
 		}
 
-		server.Serve(serviceConfig)
+		sservice, err := server.BuildServe(serviceConfig)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "build service error"))
+		}
+
+		if *daemon {
+			// 使用后台运行
+			err := runAsService(sservice)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			err := sservice.StartSync(cmd.Context())
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
 	},
+}
+
+func runAsService(server service.Interface) error {
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	cfg := service.Config{
+		Name:         "easyserver",
+		UserName:     currentUser.Username,
+		Description:  "easyserver is a very easy static server, with a easy dashboard",
+		Dependencies: []string{"After=network.target syslog.target"},
+		Arguments:    os.Args[1:],
+	}
+
+	s, err := service.New(server, &cfg)
+	if err != nil {
+		return err
+	}
+
+	err = s.Install()
+	if err != nil {
+		if !strings.Contains(err.Error(), "Init already exists") {
+			return err
+		}
+		// 已经注册了，就放过
+	}
+
+	err = s.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

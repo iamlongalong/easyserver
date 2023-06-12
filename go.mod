@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-playground/validator/v10 v10.14.0
+	github.com/kardianos/service v1.2.2
 	github.com/magiconair/properties v1.8.7
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.7.0

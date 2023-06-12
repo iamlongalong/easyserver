@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/iamlongalong/easyserver/assets"
 	"github.com/iamlongalong/easyserver/cmd/internal/model"
+	"github.com/kardianos/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -277,7 +279,7 @@ func CreateToken(c *gin.Context) {
 	})
 }
 
-func Serve(s model.ServieConfig) {
+func BuildServe(s model.ServieConfig) (model.Service, error) {
 	// init user auths
 	err := InitUserAuths(s.Users)
 	if err != nil {
@@ -368,16 +370,64 @@ func Serve(s model.ServieConfig) {
 		fmt.Printf("https domain: https://%s\n", s.Https.Domain)
 	}
 
-	// 设置 https
-	if s.Https.Cert != "" {
-		err = engine.RunTLS(s.Addr, s.Https.Cert, s.Https.Key)
-	} else {
-		err = engine.Run(s.Addr)
+	server := &http.Server{
+		Addr:    s.Addr,
+		Handler: engine,
 	}
 
-	if err != nil {
-		log.Fatal(err)
+	return &Server{
+		server:   server,
+		certFile: s.Https.Cert,
+		keyFile:  s.Https.Key,
+	}, nil
+}
+
+type Server struct {
+	server   *http.Server
+	certFile string
+	keyFile  string
+}
+
+func (s *Server) Start(ss service.Service) error {
+	if s.certFile != "" {
+		go func() {
+			err := s.server.ListenAndServeTLS(s.certFile, s.keyFile)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	} else {
+		go func() {
+			err := s.server.ListenAndServe()
+			if err != nil {
+				panic(err)
+			}
+		}()
 	}
+
+	return nil
+}
+
+func (s *Server) Stop(ss service.Service) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+
+	return s.server.Shutdown(ctx)
+}
+
+func (s *Server) StartSync(ctx context.Context) error {
+	go func() {
+		select {
+		case <-ctx.Done():
+			s.Stop(nil)
+		}
+	}()
+
+	if s.certFile != "" {
+		return s.server.ListenAndServeTLS(s.certFile, s.keyFile)
+	}
+
+	return s.server.ListenAndServe()
 }
 
 func DeleteToken(c *gin.Context) {
