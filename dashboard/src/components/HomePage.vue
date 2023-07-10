@@ -67,22 +67,22 @@
                 v-if="files.length != 0"
                 style="height: 60vh; overflow-y: auto; overflow-x: hidden"
               >
-              <div style="padding: 15px 20px;">
-                <el-row :gutter="20" justify="space-between">
-                  <div
-                    v-for="(file, index) in files"
-                    :key="index"
-                    style="margin: 5px 10px"
-                  >
-                    <!-- files block -->
-                    <FileItem
-                      @fileDBClick="handledblClick"
-                      style="width: 140px"
-                      :file="file"
-                    ></FileItem>
-                  </div>
-                </el-row>
-              </div>
+                <div style="padding: 15px 20px">
+                  <el-row :gutter="20" justify="space-between">
+                    <div
+                      v-for="(file, index) in files"
+                      :key="index"
+                      style="margin: 5px 10px"
+                    >
+                      <!-- files block -->
+                      <FileItem
+                        @fileDBClick="handledblClick"
+                        style="width: 140px"
+                        :file="file"
+                      ></FileItem>
+                    </div>
+                  </el-row>
+                </div>
               </div>
             </div>
           </div>
@@ -250,6 +250,7 @@ import {
 import { ref, h } from "vue";
 
 import axios from "axios";
+import { pa } from "element-plus/es/locale";
 
 @Options({
   props: {},
@@ -296,7 +297,19 @@ export default class HomePage extends Vue {
     }
   }
 
-  currentPaths: string[] = ["/"];
+  getPathByQuery(): Array<string> {
+    const params = new URLSearchParams(window.location.search);
+    let paths =
+      params
+        .get("path")
+        ?.split("/")
+        .filter((item) => item !== "") || [];
+
+    paths.unshift("/");
+    return paths;
+  }
+
+  currentPaths: string[] = this.getPathByQuery();
 
   handledblClick(file: FileInfo) {
     if (file.filetype === FileType.Folder) {
@@ -363,7 +376,11 @@ export default class HomePage extends Vue {
 
   goToPathByIndex(index: number) {
     this.currentPaths = this.currentPaths.slice(0, index + 1);
-    this.getPathFiles(this.currentDir);
+
+    this.getPathFiles(this.currentDir).then((res) => {
+      console.log("get res : ", res);
+      this.updateQueryPath();
+    });
   }
 
   cleanPaths(path: string): string {
@@ -406,6 +423,8 @@ export default class HomePage extends Vue {
   getPathFiles(path: string): Promise<any> {
     let baseUrl = "/_apilist";
 
+    console.log("in get path files", path);
+
     // join url path with baseUrl and currentDir, clean then
     let finalpath = [baseUrl, path].join("/").replace(/\/+/g, "/");
 
@@ -441,6 +460,8 @@ export default class HomePage extends Vue {
         });
 
         this.files = newfiles;
+
+        this.updateQueryPath();
       })
       .catch((err) => {
         ElMessage({
@@ -451,8 +472,21 @@ export default class HomePage extends Vue {
       });
   }
 
+  updateQueryPath() {
+    const params = new URLSearchParams(window.location.search);
+
+    // Modify the existing query parameters
+    params.set("path", this.currentDir);
+
+    console.log("path ", this.currentDir);
+    // Add the modified query parameters to the URL
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, "", newUrl);
+  }
+
   changePath(path: string) {
     this.currentPaths.push(path);
+    // this.updateQueryPath()
   }
 
   uploadFile(options: UploadRequestOptions): Promise<XMLHttpRequest> {
