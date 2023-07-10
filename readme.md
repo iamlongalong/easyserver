@@ -124,7 +124,7 @@ go install github.com/iamlongalong/easyserver
 # 4. 开始使用  easyserver serve .
 
 # 如果你想通过脚本一键安装，可以使用 (当然，前提是你能访问下面的地址……)
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/iamlongalong/easyserver/master/update-easyserver.sh)"
+sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/iamlongalong/easyserver/master/get-easyserver.sh)"
 
 # 所以，给一个国内的地址
 sudo bash -c "$(curl -fsSL https://static.longalong.cn/scripts/get-easyserver.sh)"
