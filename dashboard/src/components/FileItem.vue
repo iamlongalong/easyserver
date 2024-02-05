@@ -15,7 +15,9 @@
     </div>
     <div>
       <div class="file-name-info">
-        {{ file.filename }}
+        <a class="notlink" :href="getFileDownloadLink(file.filename)">{{
+          file.filename
+        }}</a>
       </div>
       <div class="file-modify-info">
         {{ convertDate(file.modify_time) }}
@@ -25,11 +27,10 @@
 </template>
 
 
-
 <script lang="ts">
 import { Options, Vue } from "vue-class-component";
 import { FileInfo, FileType } from "@/types";
-import { getEnvUrl } from "@/utils";
+import { getEnvUrl, getCurrDirPath, joinPath } from "@/utils";
 
 let file: FileInfo;
 
@@ -61,6 +62,14 @@ export default class FileItem extends Vue {
 
     return src;
   }
+
+  getFileDownloadLink(fname: string): string {
+    let originUrl = getEnvUrl();
+    let dirPath = getCurrDirPath();
+    let link = joinPath(originUrl, dirPath, fname);
+
+    return link;
+  }
 }
 </script>
 
@@ -89,5 +98,14 @@ export default class FileItem extends Vue {
   left: 0;
   width: 100%;
   height: 100%;
+}
+
+.notlink {
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 </style>

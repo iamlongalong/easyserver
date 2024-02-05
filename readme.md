@@ -51,6 +51,9 @@ easyserver serve .
 ```bash
 # 设置 host 和 port
 easyserver serve . --addr 0.0.0.0:8080
+
+# 或者使用 ipv4+ipv6
+easyserver serve . --addr='[::]:8080'
 ```
 
 ```bash

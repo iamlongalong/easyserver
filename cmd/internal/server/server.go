@@ -296,7 +296,11 @@ func Serve(s model.ServieConfig) {
 		log.Fatal(err)
 	}
 
-	homeDir = filepath.Base(s.Home)
+	if filepath.IsAbs(s.Home) {
+		homeDir = filepath.Clean(s.Home)
+	} else {
+		homeDir = filepath.Base(s.Home)
+	}
 	// 检查 homeDir 是否存在，不存在则创建
 	fi, err := os.Stat(homeDir)
 	if err != nil {
@@ -307,6 +311,11 @@ func Serve(s model.ServieConfig) {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	fi, err = os.Stat(homeDir)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	if !fi.IsDir() {

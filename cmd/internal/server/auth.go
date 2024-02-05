@@ -68,7 +68,7 @@ func createToken(u *model.User, t model.TokenAuth) error {
 	// check user auth
 	for tp, role := range t.PathRoles {
 		if !userAuth(*u, tp, role.Mode) {
-			return errors.Errorf("user [%s] not have path [%s] auth", u.UserName, t)
+			return errors.Errorf("user [%s] not have path [%s] auth", u.UserName, t.Token)
 		}
 	}
 

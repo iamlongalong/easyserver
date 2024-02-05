@@ -105,6 +105,7 @@ type CreateTokenParams struct {
 
 type ServieConfig struct {
 	Server
+
 	Users []UserAuths `json:"users" mapstructure:"users"`
 	Any   Annymous    `json:"any" mapstructure:"any"`
 	// Admin User        `json:"admin" mapstructure:"admin"`
