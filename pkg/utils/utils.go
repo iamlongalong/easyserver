@@ -6,24 +6,61 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // GetPreferredOutboundIP 获取本机最合适的 ipv4 地址
 func GetPreferredOutboundIP() (net.IP, error) {
-	addrs, err := net.InterfaceAddrs()
+	interfaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, addr := range addrs {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP, nil
+	// 网卡名 => []ip
+	tars := map[string][]net.IP{}
+
+	for _, i := range interfaces {
+		addrs, err := i.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
+				if ipNet.IP.To4() != nil {
+					tars[i.Name] = append(tars[i.Name], ipNet.IP)
+				}
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("no suitable IPV4 address found")
+	// 主网卡优先级顺序
+	priority := []string{"eth0", "eth1", "wlan0", "wlan1"}
+
+	for _, name := range priority {
+		if ips, ok := tars[name]; ok && len(ips) > 0 {
+			return ips[0], nil
+		}
+	}
+
+	// enp 和 wlp 的, eg: "enp0s3", "enp0s8", "wlp2s0", "wlp3s0b1"
+	for name, ips := range tars {
+		if strings.HasPrefix(name, "enp") || strings.HasPrefix(name, "wlp") {
+			if len(ips) > 0 {
+				return ips[0], nil
+			}
+		}
+	}
+
+	// 其他的随意了
+	for _, ips := range tars {
+		if len(ips) > 0 {
+			return ips[0], nil
+		}
+	}
+
+	// 什么都没有就是本地回环
+	return net.IPv4(127, 0, 0, 1), nil
 }
 
 func GetAvailablePort(start int, end int) (int, error) {
