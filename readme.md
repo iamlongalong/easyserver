@@ -45,8 +45,8 @@ ftp 是常用的。你可以选择传统的 ftp server，例如 vsftpd.
 ## 先跑起来吧
 
 ```bash
-# 最简单的 share 模式, 自动寻找合适的端口, 打印 share link, 定时自动关闭
-easyserver share xxx
+# 最简单的 share 模式, 自动寻找合适的端口, 打印 share link, 定时自动关闭, 后台运行 (-d)
+easyserver share xxx -d
 ```
 
 ```bash
