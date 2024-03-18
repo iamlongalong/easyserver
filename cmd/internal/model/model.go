@@ -48,8 +48,14 @@ func (pr *PathRole) Valid() bool {
 func (pr *PathRole) HasPermit(p string, mode string) bool {
 	p = filepath.Clean(p)
 
+	targetDirPath := pr.Path
+
+	if !strings.HasSuffix(targetDirPath, "/") {
+		targetDirPath = targetDirPath + "/"
+	}
+
 	// 仅通过前缀判断权限，不考虑通配符
-	if strings.HasPrefix(p, pr.Path) {
+	if strings.HasPrefix(p, targetDirPath) || p == pr.Path {
 		if mode == "r" {
 			return true
 		}
@@ -106,6 +112,8 @@ type CreateTokenParams struct {
 type ServieConfig struct {
 	Server
 
+	CloseConf CloseConf `json:"close_conf" mapstructure:"close_conf"`
+
 	Users []UserAuths `json:"users" mapstructure:"users"`
 	Any   Annymous    `json:"any" mapstructure:"any"`
 	// Admin User        `json:"admin" mapstructure:"admin"`
@@ -117,4 +125,9 @@ type ResFileInfo struct {
 	IsDir        bool   `json:"is_dir"`
 	ModTimeStamp int64  `json:"mod_time"`
 	FileType     string `json:"file_type"`
+}
+
+type CloseConf struct {
+	MaxTimes    int           `json:"max_times"`
+	MaxDuration time.Duration `json:"max_duration"`
 }

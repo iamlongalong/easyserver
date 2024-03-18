@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -110,7 +109,7 @@ func deleteToken(user model.User, token string, all bool) error {
 // AuthMiddleware is a middleware for static auth
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("running in auth middleware")
+		// fmt.Println("running in auth middleware")
 		// 检查接口是否需要权限， 和 / 拼接，保证所有的路径都在 homedir 之下
 		path := filepath.Join("/", filepath.Clean(c.Request.URL.Path))
 		method := c.Request.Method

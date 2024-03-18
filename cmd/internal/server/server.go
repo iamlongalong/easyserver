@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -278,6 +279,11 @@ func CreateToken(c *gin.Context) {
 }
 
 func Serve(s model.ServieConfig) {
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_ = ctx
+
 	// init user auths
 	err := InitUserAuths(s.Users)
 	if err != nil {
@@ -319,7 +325,8 @@ func Serve(s model.ServieConfig) {
 	}
 
 	if !fi.IsDir() {
-		log.Fatalf("%s is not a dir", homeDir)
+		// log.Fatalf("%s is not a dir", homeDir)
+		// support share one file
 	}
 
 	// 检查 https
@@ -346,21 +353,51 @@ func Serve(s model.ServieConfig) {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	var srv *http.Server
+
 	engine := gin.Default()
+
+	if s.CloseConf.MaxTimes > 0 {
+		currentRunTimes := 0
+		engine.Use(func(c *gin.Context) {
+			c.Next()
+
+			if c.Writer.Status() == 200 {
+				currentRunTimes += 1
+			}
+
+			if currentRunTimes >= s.CloseConf.MaxTimes {
+				go func() {
+					log.Printf("📢 server would be close by max times: %d in 60s\n", s.CloseConf.MaxTimes)
+					cancel()
+					srv.Close()
+
+					time.Sleep(time.Minute)
+
+					log.Printf("max wait of 60s, force exit now\n")
+					os.Exit(0)
+				}()
+			}
+		})
+	}
+
 	Register(engine)
 
 	// print users info
-	fmt.Println(banner)
-	for _, u := range s.Users {
-		proles := ""
-		for _, pr := range u.PathRoles {
-			proles += fmt.Sprintf("%s:%s\t", pr.Path, pr.Mode)
-		}
+	if len(s.Users) > 0 {
+		fmt.Println(banner)
+		for _, u := range s.Users {
+			proles := ""
+			for _, pr := range u.PathRoles {
+				proles += fmt.Sprintf("%s:%s\t", pr.Path, pr.Mode)
+			}
 
-		fmt.Printf("user: %s , paths:  %s\n", u.User.UserName, proles)
+			fmt.Printf("user: %s , paths:  %s\n", u.User.UserName, proles)
+		}
 	}
-	fmt.Println(banner)
+
 	if s.Any.Enable {
+		fmt.Println(banner)
 		anyPaths := ""
 		for _, pr := range s.Any.Paths {
 			anyPaths += fmt.Sprintf("%s:%s\t", pr.Path, pr.Mode)
@@ -371,17 +408,37 @@ func Serve(s model.ServieConfig) {
 	}
 
 	// print server info
-	fmt.Printf("server listen on %s\n", s.Addr)
-
 	if s.Https.Domain != "" {
-		fmt.Printf("https domain: https://%s\n", s.Https.Domain)
+		fmt.Printf("\nhttps domain: https://%s\n", s.Https.Domain)
+	} else {
+		fmt.Printf("\nserver listen on %s\n", s.Addr)
+	}
+
+	srv = &http.Server{
+		Addr:    s.Addr,
+		Handler: engine,
+	}
+
+	if s.CloseConf.MaxDuration > 0 {
+		go func() {
+			time.Sleep(s.CloseConf.MaxDuration)
+
+			log.Printf("📢 server closed by max duration %s\n", s.CloseConf.MaxDuration)
+
+			cancel()
+			srv.Close()
+
+			time.Sleep(time.Second * 60) // max wait
+			log.Printf("max wait of 60s, force exit now\n")
+			os.Exit(0)
+		}()
 	}
 
 	// 设置 https
 	if s.Https.Cert != "" {
-		err = engine.RunTLS(s.Addr, s.Https.Cert, s.Https.Key)
+		err = srv.ListenAndServeTLS(s.Https.Cert, s.Https.Key)
 	} else {
-		err = engine.Run(s.Addr)
+		err = srv.ListenAndServe()
 	}
 
 	if err != nil {
