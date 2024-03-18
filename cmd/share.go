@@ -4,7 +4,6 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -101,8 +100,6 @@ var shareCmd = &cobra.Command{
 		}
 
 		if *shareInDeamon {
-			b, _ := json.MarshalIndent(serviceConfig, "", "  ")
-			os.WriteFile("/Users/bytedance/go/src/gayhub/easyserver/xx.log", b, os.ModePerm|os.ModeAppend)
 			targetArgs := []string{}
 
 			for _, arg := range os.Args {
