@@ -157,7 +157,7 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 - [x] 可以通过 token 访问，可以指定 token 的有效期、write可用次数、可用路径、可用操作类型(r/w)
 - [x] 可以指定 https 的证书文件
 - [x] 可以通过 config 文件配置，也可以通过命令行参数配置
-- [x] 一键 share
+- [x] 一键 share (-d 后台运行)
 
 后面大概率会加上的功能：
 

@@ -15,8 +15,10 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o build/easyser
 echo 'build for linux mips'
 # router
 CGO_ENABLED=0 GOOS=linux GOARCH=mips go build -ldflags="-s -w" -o build/easyserver-linux-mips .
-CGO_ENABLED=0 GOOS=linux GOARCH=mips64 go build -ldflags="-s -w" -o build/easyserver-linux-mips64 .
+# CGO_ENABLED=0 GOOS=linux GOARCH=mips64 go build -ldflags="-s -w" -o build/easyserver-linux-mips64 .
 
 echo '🎉🎉🎉🎉  finish build'
 
 ls -alh build/*
+
+upx -9 build/*
