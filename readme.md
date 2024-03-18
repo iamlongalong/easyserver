@@ -45,6 +45,11 @@ ftp 是常用的。你可以选择传统的 ftp server，例如 vsftpd.
 ## 先跑起来吧
 
 ```bash
+# 最简单的 share 模式, 自动寻找合适的端口, 打印 share link, 定时自动关闭
+easyserver share xxx
+```
+
+```bash
 easyserver serve .
 ```
 
@@ -152,6 +157,7 @@ docker run -p 8080:8080 -v `pwd`:/data --rm --name easyserver -itd iamlongalong/
 - [x] 可以通过 token 访问，可以指定 token 的有效期、write可用次数、可用路径、可用操作类型(r/w)
 - [x] 可以指定 https 的证书文件
 - [x] 可以通过 config 文件配置，也可以通过命令行参数配置
+- [x] 一键 share
 
 后面大概率会加上的功能：
 

@@ -1,0 +1,23 @@
+{
+  "addr": "0.0.0.0:5001",
+  "https": {
+    "domain": "",
+    "cert": "",
+    "key": ""
+  },
+  "home": "/Users/bytedance/go/src/gayhub/easyserver/local",
+  "close_conf": {
+    "max_times": 5,
+    "max_duration": 600000000000
+  },
+  "users": null,
+  "any": {
+    "enable": true,
+    "paths": [
+      {
+        "path": "/hello.txt",
+        "mode": "r"
+      }
+    ]
+  }
+}

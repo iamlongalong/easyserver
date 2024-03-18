@@ -4,9 +4,11 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 
 var (
 	shareFileTimes    *int
+	shareInDeamon     *bool
 	shareFileDuration *time.Duration
 )
 
@@ -29,6 +32,7 @@ var shareCmd = &cobra.Command{
 	Short: "share a file or dir with default config and timeout",
 	Long:  `share a file or dir with default config and timeout`,
 	Run: func(cmd *cobra.Command, args []string) {
+
 		dirOrFile := "."
 
 		if len(args) > 0 {
@@ -93,9 +97,46 @@ var shareCmd = &cobra.Command{
 				Path: filepath.Join("/", info.Name()),
 				Mode: "r",
 			})
-			fmt.Printf("\n👁 share link: %s\n\n", utils.GetHttpAddrString(false, ipStr, port, info.Name()))
+			fmt.Printf("\n👁  share link: %s\n\n", utils.GetHttpAddrString(false, ipStr, port, info.Name()))
 		}
 
+		if *shareInDeamon {
+			b, _ := json.MarshalIndent(serviceConfig, "", "  ")
+			os.WriteFile("/Users/bytedance/go/src/gayhub/easyserver/xx.log", b, os.ModePerm|os.ModeAppend)
+			targetArgs := []string{}
+
+			for _, arg := range os.Args {
+				if arg == "-d" || arg == "--daemon" {
+					continue
+				}
+				targetArgs = append(targetArgs, arg)
+			}
+			var cmd *exec.Cmd
+			if len(targetArgs) == 0 {
+				cmd = exec.Command(targetArgs[0])
+			} else {
+				cmd = exec.Command(targetArgs[0], targetArgs[1:]...)
+			}
+
+			wouldCloseBySelf := false
+			if serviceConfig.CloseConf.MaxTimes > 0 {
+				fmt.Printf("\n📢 server will be close after [%d] times success get\n", serviceConfig.CloseConf.MaxTimes)
+				wouldCloseBySelf = true
+			}
+			if serviceConfig.CloseConf.MaxDuration > 0 {
+				fmt.Printf("\n📢 server will be close after [%s]\n", serviceConfig.CloseConf.MaxDuration)
+				wouldCloseBySelf = true
+			}
+
+			if !wouldCloseBySelf {
+				fmt.Printf("\n ❌ must set self close policy (may be 364d if you like?)\n")
+				os.Exit(1)
+			}
+
+			_ = cmd
+			cmd.Start()
+			return
+		}
 		server.Serve(serviceConfig)
 	},
 }
@@ -105,6 +146,7 @@ func init() {
 
 	shareFileTimes = shareCmd.Flags().Int("times", 5, "times for file share (only for share a file). 0 to disable auto close")
 	shareFileDuration = shareCmd.Flags().Duration("duration", time.Minute*10, "time for share, close after the duration. 0 to disable auto close")
+	shareInDeamon = shareCmd.Flags().BoolP("daemon", "d", false, "share in daemon, will self closed by --times and --duration")
 
 	// Here you will define your flags and configuration settings.
 

@@ -28,7 +28,7 @@ func GetPreferredOutboundIP() (net.IP, error) {
 
 func GetAvailablePort(start int, end int) (int, error) {
 	for port := start; port <= end; port++ {
-		ln, err := net.Listen("tcp", "localhost:"+strconv.Itoa(port))
+		ln, err := net.Listen("tcp", "0.0.0.0:"+strconv.Itoa(port))
 		if err != nil {
 			continue // 如果此端口不可用，尝试下一个端口
 		}
@@ -50,7 +50,7 @@ func GetHttpAddrString(useSSL bool, ip string, port int, path string) string {
 	base := fmt.Sprintf("%s://%s:%d", schema, ip, port)
 	p, err := url.JoinPath(base, path)
 	if err != nil {
-		log.Printf("[GetHttpAddrString] error: %s. params: %s, %s, %d, %s", err, useSSL, ip, port, path)
+		log.Printf("[GetHttpAddrString] error: %s. params: %v, %s, %d, %s", err, useSSL, ip, port, path)
 		return base
 	}
 

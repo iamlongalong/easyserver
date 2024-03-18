@@ -362,11 +362,11 @@ func Serve(s model.ServieConfig) {
 		engine.Use(func(c *gin.Context) {
 			c.Next()
 
-			if c.Writer.Status() == 200 {
+			if c.Writer.Status() < 400 { // 视为一次成功请求
 				currentRunTimes += 1
 			}
 
-			if currentRunTimes >= s.CloseConf.MaxTimes {
+			if currentRunTimes > s.CloseConf.MaxTimes {
 				go func() {
 					log.Printf("📢 server would be close by max times: %d in 60s\n", s.CloseConf.MaxTimes)
 					cancel()
