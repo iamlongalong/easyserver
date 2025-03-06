@@ -109,7 +109,52 @@ func handleGetFileInfos(c *gin.Context) {
 
 func Register(engine *gin.Engine) {
 
-	fileServer := http.FileServer(http.Dir(homeDir))
+	homedirServe := func(c *gin.Context) {
+		relativePath := filepath.Join("/", filepath.Clean(c.Request.URL.Path))
+
+		// If path ends with "/", treat it as directory only
+		if strings.HasSuffix(c.Request.URL.Path, "/") {
+			fullPath := filepath.Join(homeDir, relativePath)
+			fi, err := os.Stat(fullPath)
+			if err == nil && fi.IsDir() {
+				http.FileServer(http.Dir(homeDir)).ServeHTTP(c.Writer, c.Request)
+				return
+			}
+			c.JSON(http.StatusNotFound, gin.H{"message": "directory not found"})
+			return
+		}
+
+		// Try paths in sequence: xx => xx.html => xx/index.html
+		pathsToTry := []string{
+			filepath.Join(homeDir, relativePath),
+		}
+
+		// Only try alternate paths if the original path has no extension
+		if filepath.Ext(relativePath) == "" {
+			pathsToTry = append(
+				pathsToTry,
+				filepath.Join(homeDir, relativePath+".html"),
+				filepath.Join(homeDir, relativePath),
+			)
+		}
+
+		// Try each path in sequence
+		for _, tryPath := range pathsToTry {
+			fi, err := os.Stat(tryPath)
+			if err == nil {
+				// If it's a directory, only serve if we're trying the original path
+				if fi.IsDir() && tryPath == pathsToTry[0] {
+					continue
+				}
+
+				http.ServeFile(c.Writer, c.Request, tryPath)
+				return
+			}
+		}
+
+		// If we get here, none of the paths worked
+		c.JSON(http.StatusNotFound, gin.H{"message": "not found"})
+	}
 
 	engine.Use(CorsMiddleware()).Use(AuthMiddleware())
 
@@ -148,11 +193,12 @@ func Register(engine *gin.Engine) {
 		}
 	})
 
-	homedirServe := gin.WrapH(fileServer)
 	engine.NoRoute(func(c *gin.Context) {
 		// GET 为 static file server
 		if c.Request.Method == "GET" || c.Request.Method == "HEAD" {
 			c.Writer.WriteHeader(200) // fix the gin write status 404
+
+			// if path is xx, find as follows: xx => xx.html => xx/index.html
 
 			homedirServe(c)
 			return

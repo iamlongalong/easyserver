@@ -125,7 +125,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		if path == "/ping" {
-			c.Next()
+			c.JSON(200, gin.H{"message": "pong"})
 			return
 		}
 
